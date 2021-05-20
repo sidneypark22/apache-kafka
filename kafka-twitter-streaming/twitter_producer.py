@@ -2,10 +2,40 @@ import requests
 import json
 from datetime import datetime
 
-from kafka import KafkaProducer
+#from kafka import KafkaProducer
 
-topic_name = 'tweets'
-kafka_server = 'localhost:9092'
+import boto3
+
+access_key_id = 'AKIAYUACYWBUNDDYX3PW'
+secret_access_key = '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'
+
+session = boto3.Session(
+    aws_access_key_id=access_key_id,
+    aws_secret_access_key=secret_access_key
+)
+
+s3_client = session.client('s3')
+s3_resource = session.resource('s3')
+
+bucket = 'spark22-kafka-streaming'
+
+#s3_client.list_objects(
+#    Bucket = bucket
+#)['Contents']
+
+s3_bucket = s3_resource.Bucket(bucket)
+s3_bucket_folder_name = "twitter-streaming/"
+
+for obj in s3_bucket.objects.all().filter(Prefix=s3_bucket_folder_name + "checkpoint"):
+    last_checkpoint_file_name = obj.key
+    last_checkpoint_id = last_checkpoint_file_name.replace(s3_bucket_folder_name, "").replace('checkpoint-', '').replace('.chk', '')
+
+#s3_objects = s3_client.list_objects(
+#    Bucket='spark22-20201228'
+#)
+
+#topic_name = 'tweets'
+#kafka_server = 'localhost:9092'
 
 BEARER_TOKEN = "AAAAAAAAAAAAAAAAAAAAAJbpIwEAAAAAk4Ed%2Bi6Bb11C5%2FhFXADeC24cPNg%3DZYcCYf3WfukS1YSnOS8VEzHBpqj2zVDmYhoZLO3vnhgnaAM0Uo"
 
@@ -45,7 +75,7 @@ number_of_results = 10
 
 json_response = search_twitter(
     query=query, 
-    last_newest_id=last_newest_id, 
+    last_newest_id=last_checkpoint_id, 
     number_of_results=number_of_results, 
     tweet_fields=tweet_fields, 
     bearer_token=BEARER_TOKEN
@@ -72,61 +102,40 @@ def users_json_response(json_response):
     user_list = json_response["includes"]["users"]
     return user_list
 
-
 tweet_list = flatten_tweet_json_response(json_response)
 user_list = users_json_response(json_response)
 
-oldest_id = json_response["meta"]["oldest_id"]
-newest_id = json_response["meta"]["newest_id"]
+tweet_list_formatted = json.dumps(tweet_list, indent=4, sort_keys = True)
+user_list_formatted = json.dumps(user_list, indent=4, sort_keys = True)
 
+current_datetime = datetime.now().strftime("%Y%m%d%H%M%S")
+twitter_list_json_filename = '{}twitter_list_{}.json'.format(s3_bucket_folder_name,current_datetime)
+user_list_json_filename = '{}user_list_{}.json'.format(s3_bucket_folder_name,current_datetime)
+metadata_json_filename = '{}metadata_{}.json'.format(s3_bucket_folder_name,current_datetime)
 
-
-print(json.dumps(json_response, indent=4, sort_keys=True))
-
-import boto3
-
-access_key_id = 'AKIAYUACYWBUNDDYX3PW'
-secret_access_key = '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'
-
-session = boto3.Session(
-    aws_access_key_id=access_key_id,
-    aws_secret_access_key=secret_access_key
+###Twitter list json file
+s3_object = s3_resource.Object(bucket, twitter_list_json_filename)
+s3_object.put(
+    Body=bytes(tweet_list_formatted.encode('UTF-8'))
 )
 
-s3_client = session.client('s3')
-
-#s3_objects = s3_client.list_objects(
-#    Bucket='spark22-20201228'
-#)
-
-
-bucket = 'spark22-kafka-streaming'
-new_checkpoint_file = open("checkpoint-1393577556570411016.chk", "x")
-new_checkpoint_filename = new_checkpoint_file.name
-s3_bucket_folder_name = "twitter-streaming/"
-object_name = s3_bucket_folder_name + new_checkpoint_filename
-#print(object_name)
-s3_client.upload_file(new_checkpoint_filename, bucket, object_name)
-
-s3_client.delete_object(
-    Bucket=bucket,
-    Key="twitter-streaming/1393577556570411016.checkpoint"
+###User list json file
+s3_object = s3_resource.Object(bucket, user_list_json_filename)
+s3_object.put(
+    Body=bytes(user_list_formatted.encode('UTF-8'))
 )
 
+###Metadata json file
+s3_object = s3_resource.Object(bucket, metadata_json_filename)
+s3_object.put(
+    Body=bytes(json.dumps(json_response['meta'], indent=4, sort_keys=True).encode('UTF-8'))
+)
 
-for bucket in s3_client.list_buckets()['Buckets']:
-    print(bucket['Name'])
+new_checkpoint_id = json_response["meta"]["newest_id"]
 
-for obj in s3_client.list_objects(Bucket='spark22-kafka-streaming', Prefix=s3_bucket_folder_name + "checkpoint")["Contents"]:
-    print(obj["Key"])
+new_checkpoint_file_name = '{}checkpoint-{}.chk'.format(s3_bucket_folder_name,new_checkpoint_id)
 
-import os
-os.path.exists(new_checkpoint_filename)
-os.remove(new_checkpoint_filename)
-
-s3_resource = session.resource('s3')
-s3_bucket = s3_resource.Bucket(bucket)
-for obj in s3_bucket.objects.all().filter(Prefix=s3_bucket_folder_name + "checkpointaa"):
-    print(obj)
-
-s3_client = l
+s3_object = s3_resource.Object(bucket, last_checkpoint_file_name)
+s3_object.delete()
+s3_object = s3_resource.Object(bucket, new_checkpoint_file_name)
+s3_object.put()
