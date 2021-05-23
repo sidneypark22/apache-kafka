@@ -89,7 +89,7 @@ for json_response_byte in consumer:
         last_checkpoint_file_name = obj.key
         #last_checkpoint_id = last_checkpoint_file_name.replace(s3_bucket_folder_name, "").replace('checkpoint-', '').replace('.chk', '')
     print('step 7')
-    current_datetime = datetime.now().strftime("%Y%m%d%H%M%S"))
+    current_datetime = datetime.now().strftime("%Y%m%d%H%M%S")
     upload_json_files_to_s3_bucket(tweet_list_formatted,user_list_formatted,json_response,last_checkpoint_file_name,current_datetime)
     print('files uploaded to s3 bucket with timestamp {}'.format(current_datetime))
 
