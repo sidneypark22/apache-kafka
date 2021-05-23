@@ -1,10 +1,8 @@
 import requests
-import json
-from datetime import datetime
-
-#from kafka import KafkaProducer
-
 import boto3
+from kafka import KafkaProducer, producer
+import time
+import json
 
 access_key_id = 'AKIAYUACYWBUNDDYX3PW'
 secret_access_key = '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'
@@ -25,10 +23,6 @@ bucket = 'spark22-kafka-streaming'
 
 s3_bucket = s3_resource.Bucket(bucket)
 s3_bucket_folder_name = "twitter-streaming/"
-
-for obj in s3_bucket.objects.all().filter(Prefix=s3_bucket_folder_name + "checkpoint"):
-    last_checkpoint_file_name = obj.key
-    last_checkpoint_id = last_checkpoint_file_name.replace(s3_bucket_folder_name, "").replace('checkpoint-', '').replace('.chk', '')
 
 #s3_objects = s3_client.list_objects(
 #    Bucket='spark22-20201228'
@@ -66,76 +60,30 @@ def search_twitter(query, last_newest_id, number_of_results, tweet_fields, beare
         raise Exception(response.status_code, response.text)
     return response.json()
 
-
-query = "doge"
-#tweet_fields = "tweet.fields=text,author_id,created_at"
-tweet_fields = "tweet.fields=text,author_id,created_at,public_metrics&expansions=author_id&user.fields=description"
-last_newest_id = "1393573728856989698"
-number_of_results = 10
-
-json_response = search_twitter(
+def get_twitter_json_response(query,number_of_results,tweet_fields):
+    for obj in s3_bucket.objects.all().filter(Prefix=s3_bucket_folder_name + "checkpoint"):
+        last_checkpoint_file_name = obj.key
+        last_checkpoint_id = last_checkpoint_file_name.replace(s3_bucket_folder_name, "").replace('checkpoint-', '').replace('.chk', '')
+    json_response = search_twitter(
     query=query, 
     last_newest_id=last_checkpoint_id, 
     number_of_results=number_of_results, 
     tweet_fields=tweet_fields, 
     bearer_token=BEARER_TOKEN
-)
+    )
+    return json_response
 
-def flatten_tweet_json_response(json_response):
-    tweet_list = []
-    for tweet in json_response["data"]:
-        tweet_flatten = {
-            'id': tweet['id']
-            , 'created_at': tweet['created_at']
-            , 'author_id': tweet['author_id']
-            , 'text': tweet['text']
-            , 'retweet_count': tweet['public_metrics']['retweet_count']
-            , 'reply_count': tweet['public_metrics']['reply_count']
-            , 'like_count': tweet['public_metrics']['like_count']
-            , 'quote_count': tweet['public_metrics']['quote_count']
-        }
-        tweet_list.append(tweet_flatten)
-    return tweet_list
+query = "doge"
+#tweet_fields = "tweet.fields=text,author_id,created_at"
+tweet_fields = "tweet.fields=text,author_id,created_at,public_metrics&expansions=author_id&user.fields=description"
+#last_newest_id = "1393573728856989698"
+number_of_results = 10
 
-def users_json_response(json_response):
-    user_list = []
-    user_list = json_response["includes"]["users"]
-    return user_list
+producer = KafkaProducer(bootstrap_servers=['localhost:9092'])
 
-tweet_list = flatten_tweet_json_response(json_response)
-user_list = users_json_response(json_response)
-
-tweet_list_formatted = json.dumps(tweet_list, indent=4, sort_keys = True)
-user_list_formatted = json.dumps(user_list, indent=4, sort_keys = True)
-
-current_datetime = datetime.now().strftime("%Y%m%d%H%M%S")
-twitter_list_json_filename = '{}twitter_list_{}.json'.format(s3_bucket_folder_name,current_datetime)
-user_list_json_filename = '{}user_list_{}.json'.format(s3_bucket_folder_name,current_datetime)
-metadata_json_filename = '{}metadata_{}.json'.format(s3_bucket_folder_name,current_datetime)
-
-###Twitter list json file
-s3_object = s3_resource.Object(bucket, twitter_list_json_filename)
-s3_object.put(
-    Body=bytes(tweet_list_formatted.encode('UTF-8'))
-)
-
-###User list json file
-s3_object = s3_resource.Object(bucket, user_list_json_filename)
-s3_object.put(
-    Body=bytes(user_list_formatted.encode('UTF-8'))
-)
-
-###Metadata json file
-s3_object = s3_resource.Object(bucket, metadata_json_filename)
-s3_object.put(
-    Body=bytes(json.dumps(json_response['meta'], indent=4, sort_keys=True).encode('UTF-8'))
-)
-
-new_checkpoint_id = json_response["meta"]["newest_id"]
-
-new_checkpoint_file_name = '{}checkpoint-{}.chk'.format(s3_bucket_folder_name,new_checkpoint_id)
-
-s3_object = s3_resource.Object(bucket, last_checkpoint_file_name)
-s3_object.delete()
-s3_object = s3_resource.Object(bucket, new_checkpoint_file_name)
-s3_object.put()
+for i in range(5):
+    json_response = get_twitter_json_response(query,number_of_results,tweet_fields)
+    test_json_byte = bytes(json.dumps(json_response).encode('UTF-8'))
+    producer.send('twitter-topic', test_json_byte)
+    time.sleep(20)
+    print('twitter json reponse sent {}'.format(i))
