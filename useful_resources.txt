@@ -1,0 +1,18 @@
+Kafka Quickstart
+https://kafka.apache.org/quickstart
+
+
+Install Kafka Manager (CMAK)
+https://www.youtube.com/watch?v=AlQfpG10vAc
+https://github.com/yahoo/CMAK
+
+# Start the ZooKeeper service
+# Note: Soon, ZooKeeper will no longer be required by Apache Kafka.
+$ bin/zookeeper-server-start.sh config/zookeeper.properties
+
+# Start the Kafka broker service
+$ bin/kafka-server-start.sh config/server.properties
+
+Start CMAK
+cd /CMAK/target/universal/cmak-3.0.0.5
+bin/cmak -Dconfig.file=conf/application.conf -Dhttp.port=8081
