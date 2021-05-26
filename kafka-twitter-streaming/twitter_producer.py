@@ -31,7 +31,7 @@ s3_bucket_folder_name = "twitter-streaming/"
 #topic_name = 'tweets'
 #kafka_server = 'localhost:9092'
 
-BEARER_TOKEN = "AAAAAAAAAAAAAAAAAAAAAJbpIwEAAAAAk4Ed%2Bi6Bb11C5%2FhFXADeC24cPNg%3DZYcCYf3WfukS1YSnOS8VEzHBpqj2zVDmYhoZLO3vnhgnaAM0Uo"
+BEARER_TOKEN = ""
 
 #current_utc_datetime = datetime.utcnow()
 #current_utc_datetime_rfc_3339 = current_utc_datetime.strftime("%Y-%m-%dT%H:%M:%SZ")
