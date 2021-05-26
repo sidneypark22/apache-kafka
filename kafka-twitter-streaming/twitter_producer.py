@@ -4,8 +4,8 @@ from kafka import KafkaProducer, producer
 import time
 import json
 
-access_key_id = 'AKIAYUACYWBUNDDYX3PW'
-secret_access_key = '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'
+access_key_id = ''
+secret_access_key = ''
 
 session = boto3.Session(
     aws_access_key_id=access_key_id,
