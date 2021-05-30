@@ -1,6 +1,5 @@
 # apache-kafka
 Personal project for apache-kafka
-
 Progress so far:
 Twitter streaming - python
 This runs a twitter web api and get response from the request.
