@@ -6,3 +6,4 @@ Progress so far: kafka-twitter-streaming - Twitter streaming - python
 4) Each data is uploaded to AWS s3 bucket as a json file.
 5) At the end of the process, it will grab the latest twitter id from the request and upload it as a checkpoint file.
 6) The checkpoint file with the latest twitter id retrieved is used as a watermark in the next twitter api request.
+Next step is to build a data transformation process on either Databricks or EMR using PySpark to process files created by Kafka.
