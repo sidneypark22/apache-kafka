@@ -15,7 +15,7 @@ session = boto3.Session(
 s3_client = session.client('s3')
 s3_resource = session.resource('s3')
 
-bucket = 'spark22-kafka-streaming'
+bucket = ''
 
 s3_bucket = s3_resource.Bucket(bucket)
 s3_bucket_folder_name = "twitter-streaming/"
