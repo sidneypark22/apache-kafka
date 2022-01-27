@@ -1,4 +1,7 @@
 # apache-kafka
+This is a personal space for studying kafka using Python.
+For Twitter streaming project, python scripts are included in kafka-twitter-streaming folder.
+
 Progress so far: kafka-twitter-streaming - Twitter streaming - python
 1) This runs a twitter web api and get response from the request.
 2) For data that is received from the request, it gets sent over via Kafka producer.
